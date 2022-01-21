@@ -1,0 +1,5 @@
+- archwiki calibration https://wiki.archlinux.org/title/Gamepad#Setting_up_deadzones_and_calibration
+- look into native linux support https://gist.github.com/jasonwhite/c5b2048c15993d285130
+- info joystick API https://www.kernel.org/doc/Documentation/input/joystick-api.txt
+- look into virt joysticks https://github.com/Vantskruv/wejoy
+- look into jstest calibration https://gitlab.com/jstest-gtk/jstest-gtk/-/tree/master/src
