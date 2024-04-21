@@ -1,19 +1,21 @@
 #pragma once
 
+#include <raylib.h>
+
 typedef enum {
-    BUTTON,
-    ANALOG,
+  BUTTON,
+  ANALOG,
 } InputType;
 
 typedef struct {
-    int id;
-    Color color;
-    int x;
-    int y;
-    int s;
-    InputType type;
-    char *name;
-    float idle_value;
+  int id;
+  Color color;
+  int x;
+  int y;
+  int s;
+  InputType type;
+  char *name;
+  float idle_value;
 } Input;
 
 
