@@ -83,7 +83,7 @@ void controller_deinit(void) {
   UnloadTexture(ctrl_tex);
 }
 
-void display_gamepad(int id, Rectangle area) {
+Rectangle display_gamepad(int id, Rectangle area) {
   Input LX = input_new(GAMEPAD_AXIS_LEFT_X,              YELLOW, 1, 18, 20, INPUT_ANALOG, 0, "Left X Axis", NULL);
   Input LY = input_new(GAMEPAD_AXIS_LEFT_Y,              YELLOW, 1, 19, 20, INPUT_ANALOG, 0, "Left Y Axis", NULL);
   Input RX = input_new(GAMEPAD_AXIS_RIGHT_X,             YELLOW, 1, 20, 20, INPUT_ANALOG, 0, "Right X Axis", NULL);
@@ -164,12 +164,9 @@ void display_gamepad(int id, Rectangle area) {
   svg_rasterize(&ctrl_svg);
   UpdateTexture(ctrl_tex, ctrl_svg.pixels);
 
-  float scale = fminf(1.0f, fminf(area.width / CTRL_SVG_WIDTH, area.height / CTRL_SVG_HEIGHT));
-  float draw_w = CTRL_SVG_WIDTH * scale;
-  float draw_h = CTRL_SVG_HEIGHT * scale;
-  Vector2 ctrl_pos = {
-    roundf(area.x + (area.width - draw_w) / 2),
-    roundf(area.y + (area.height - draw_h) / 2),
-  };
+  float scale = area.width / CTRL_SVG_WIDTH;
+  Vector2 ctrl_pos = {roundf(area.x), roundf(area.y)};
   DrawTextureEx(ctrl_tex, ctrl_pos, 0, scale, COLOR_TEXT);
+
+  return (Rectangle){ctrl_pos.x, ctrl_pos.y, area.width, area.height};
 }

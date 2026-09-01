@@ -5,8 +5,10 @@
 #undef RAYGUI_IMPLEMENTATION
 
 #define DEBUG_MODE true
+#include "layout.h"
 #include "controller.h"
 #include "gamepad_list.h"
+#include "button_list.h"
 
 void apply_gui_theme(void) {
   GuiSetStyle(DEFAULT, BORDER_COLOR_NORMAL, ColorToInt(COLOR_OUTLINE));
@@ -37,6 +39,7 @@ int main(void) {
   SetExitKey(KEY_Q);
 
   apply_gui_theme();
+  layout_init();
   controller_init();
 
   GamepadList gamepads;
@@ -54,9 +57,50 @@ int main(void) {
       DrawText("No Controller Detected :c", 10, 10, 20, COLOR_TEXT);
     } else {
       float sidebar_width = gamepad_list_sidebar_width(&gamepads);
-      gamepad_list_sidebar(&gamepads, (Rectangle){0, 0, sidebar_width, (float)h});
-      Rectangle ctrl_area = {sidebar_width, 0, (float)w - sidebar_width, (float)h};
-      display_gamepad(gamepads.current, ctrl_area);
+      Rectangle content_area = {sidebar_width, 0, (float)w - sidebar_width, (float)h};
+      bool fits = button_list_fits(content_area);
+
+      layout_begin(w, h);
+      CLAY({
+        .id = layout_id("Root"),
+        .layout = { .sizing = { CLAY_SIZING_FIXED((float)w), CLAY_SIZING_FIXED((float)h) } },
+      }) {
+        CLAY({
+          .id = layout_id("Sidebar"),
+          .layout = { .sizing = { CLAY_SIZING_FIXED(sidebar_width), CLAY_SIZING_GROW(0) } },
+        }) {}
+        CLAY({
+          .id = layout_id("Content"),
+          .layout = {
+            .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
+            .padding = CLAY_PADDING_ALL(GROUP_PADDING),
+            .childAlignment = { CLAY_ALIGN_X_CENTER, CLAY_ALIGN_Y_CENTER },
+          },
+        }) {
+          if (fits) {
+            button_list_build();
+          } else {
+            CLAY({
+              .id = layout_id("Controller"),
+              .layout = { .sizing = { CLAY_SIZING_GROW(0, CTRL_SVG_WIDTH), CLAY_SIZING_GROW(0, CTRL_SVG_HEIGHT) } },
+              .aspectRatio = { CTRL_SVG_WIDTH / (float)CTRL_SVG_HEIGHT },
+            }) {}
+          }
+        }
+      }
+      layout_end();
+
+      gamepad_list_sidebar(&gamepads, layout_rect("Sidebar"));
+      Rectangle ctrl_rect = fits ? button_list_draw(gamepads.current) : layout_rect("Controller");
+      display_gamepad(gamepads.current, ctrl_rect);
+
+      // DON'T DELETE THIS: layout debug code
+      const char *dbg_ids[] = {"MiddleRow", "ControllerColumn", "ShoulderRow", "BottomRow", "Dpad", "Face", "Controller"};
+      for (int i = 0; i < 7; i++) {
+        Rectangle r = layout_rect(dbg_ids[i]);
+        DrawRectangleLinesEx(r, 2, RED);
+        if (IsKeyPressed(KEY_P)) printf("%s: %.1f %.1f %.1f %.1f\n", dbg_ids[i], r.x, r.y, r.width, r.height);
+      }
     }
 
     gamepad_list_handle_keys(&gamepads);
