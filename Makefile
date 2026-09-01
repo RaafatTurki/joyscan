@@ -1,13 +1,19 @@
 NAME=joyscan
-CFLAGS=-lraylib
 SRC=src
 FILTER='MAIN:|DEBUG:'
 
 TEST_SRC=test_src
 
+RAYLIB_SRC=deps/raylib/src
+RAYLIB_LIB=$(RAYLIB_SRC)/libraylib.a
+CFLAGS=-I$(RAYLIB_SRC)
+LDLIBS=$(RAYLIB_LIB) -lm -lpthread -ldl -lrt -lX11
 
-compile:
-	gcc $(CFLAGS) ./$(SRC)/main.c -o $(NAME)
+$(RAYLIB_LIB):
+	$(MAKE) -C $(RAYLIB_SRC) PLATFORM=PLATFORM_DESKTOP RAYLIB_LIBTYPE=STATIC
+
+compile: $(RAYLIB_LIB)
+	gcc $(CFLAGS) ./$(SRC)/main.c $(LDLIBS) -o $(NAME)
 
 run: compile
 	stdbuf -oL ./$(NAME)
