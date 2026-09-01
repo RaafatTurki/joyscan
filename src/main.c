@@ -23,6 +23,7 @@ void apply_gui_theme(void) {
 
   GuiSetStyle(DEFAULT, TEXT_SIZE, 20);
   GuiSetStyle(LISTVIEW, LIST_ITEMS_HEIGHT, 40);
+  GuiSetIconScale(2);
 }
 
 int main(void) {
