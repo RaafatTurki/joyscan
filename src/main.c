@@ -5,6 +5,7 @@
 #undef RAYGUI_IMPLEMENTATION
 
 #define DEBUG_MODE true
+
 #include "layout.h"
 #include "controller.h"
 #include "gamepad_list.h"
@@ -94,12 +95,13 @@ int main(void) {
       Rectangle ctrl_rect = fits ? button_list_draw(gamepads.current) : layout_rect("Controller");
       display_gamepad(gamepads.current, ctrl_rect);
 
-      // DON'T DELETE THIS: layout debug code
-      const char *dbg_ids[] = {"MiddleRow", "ControllerColumn", "ShoulderRow", "BottomRow", "Dpad", "Face", "Controller"};
-      for (int i = 0; i < 7; i++) {
-        Rectangle r = layout_rect(dbg_ids[i]);
-        DrawRectangleLinesEx(r, 2, RED);
-        if (IsKeyPressed(KEY_P)) printf("%s: %.1f %.1f %.1f %.1f\n", dbg_ids[i], r.x, r.y, r.width, r.height);
+      if (DEBUG_MODE) {
+        const char *dbg_ids[] = {"MiddleRow", "ControllerColumn", "ShoulderRow", "BottomRow", "Dpad", "Face", "Controller"};
+        for (int i = 0; i < 7; i++) {
+          Rectangle r = layout_rect(dbg_ids[i]);
+          DrawRectangleLinesEx(r, 2, RED);
+          if (IsKeyPressed(KEY_P)) printf("%s: %.1f %.1f %.1f %.1f\n", dbg_ids[i], r.x, r.y, r.width, r.height);
+        }
       }
     }
 
