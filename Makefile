@@ -21,11 +21,6 @@ run: compile
 debug: compile
 	stdbuf -oL ./$(NAME) | grep -E $(FILTER)
 
-wejoy:
-	sudo modprobe uinput
-	wejoy ./wejoy.lua
-
-
 # test stuff
 compile_test:
 	gcc ./$(TEST_SRC)/main.c -o test_bin
