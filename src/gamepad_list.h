@@ -7,7 +7,9 @@
 #include "vector.h"
 
 #define MAX_GAMEPAD_ROWS 8
-#define SIDEBAR_WIDTH 260
+#define SIDEBAR_MIN_WIDTH 150
+#define SIDEBAR_MAX_WIDTH 500
+#define SIDEBAR_TEXT_PADDING 60
 #define SIDEBAR_FOOTER_HEIGHT 40
 
 typedef struct {
@@ -58,6 +60,20 @@ void gamepad_list_handle_keys(GamepadList *gl) {
     int prev_i = vec_prev(&gl->ids, i);
     gl->current = vec_get(&gl->ids, prev_i);
   }
+}
+
+float gamepad_list_sidebar_width(GamepadList *gl) {
+  int text_size = GuiGetStyle(DEFAULT, TEXT_SIZE);
+  float longest = 0;
+  for (int i = 0; i < vec_len(&gl->ids); i++) {
+    float w = (float)MeasureText(GetGamepadName(vec_get(&gl->ids, i)), text_size);
+    if (w > longest) longest = w;
+  }
+
+  float width = longest + SIDEBAR_TEXT_PADDING;
+  if (width < SIDEBAR_MIN_WIDTH) width = SIDEBAR_MIN_WIDTH;
+  if (width > SIDEBAR_MAX_WIDTH) width = SIDEBAR_MAX_WIDTH;
+  return width;
 }
 
 void gamepad_list_sidebar(GamepadList *gl, Rectangle bounds) {

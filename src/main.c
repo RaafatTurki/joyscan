@@ -20,6 +20,9 @@ void apply_gui_theme(void) {
   GuiSetStyle(DEFAULT, TEXT_COLOR_PRESSED, ColorToInt(COLOR_BG));
   GuiSetStyle(DEFAULT, LINE_COLOR, ColorToInt(COLOR_OUTLINE));
   GuiSetStyle(DEFAULT, BACKGROUND_COLOR, ColorToInt(COLOR_BG));
+
+  GuiSetStyle(DEFAULT, TEXT_SIZE, 20);
+  GuiSetStyle(LISTVIEW, LIST_ITEMS_HEIGHT, 40);
 }
 
 int main(void) {
@@ -49,8 +52,9 @@ int main(void) {
     if (gamepads.current == -1) {
       DrawText("No Controller Detected :c", 10, 10, 20, COLOR_TEXT);
     } else {
-      gamepad_list_sidebar(&gamepads, (Rectangle){0, 0, SIDEBAR_WIDTH, (float)h});
-      Rectangle ctrl_area = {SIDEBAR_WIDTH, 0, (float)w - SIDEBAR_WIDTH, (float)h};
+      float sidebar_width = gamepad_list_sidebar_width(&gamepads);
+      gamepad_list_sidebar(&gamepads, (Rectangle){0, 0, sidebar_width, (float)h});
+      Rectangle ctrl_area = {sidebar_width, 0, (float)w - sidebar_width, (float)h};
       display_gamepad(gamepads.current, ctrl_area);
     }
 
