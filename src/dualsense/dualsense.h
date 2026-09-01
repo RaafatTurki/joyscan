@@ -13,9 +13,8 @@ typedef struct {
 
   struct {
     bool active;
-    int finger_count;
     float x, y;
-  } touch;
+  } touch[2];
 } JSDualSenseState;
 
 #define JS_PLAYER_LED_LEFT 0x01

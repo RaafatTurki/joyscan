@@ -4,13 +4,14 @@
 #include "../deps/raygui/src/raygui.h"
 #undef RAYGUI_IMPLEMENTATION
 
-#define DEBUG_MODE true
+#define DEBUG_MODE false
 
 #include "layout.h"
 #include "controller.h"
 #include "gamepad_list.h"
 #include "button_list.h"
 #include "dualsense/dualsense.h"
+#include "touchpad_widget.h"
 
 void apply_gui_theme(void) {
   GuiSetStyle(DEFAULT, BORDER_COLOR_NORMAL, ColorToInt(COLOR_OUTLINE));
@@ -69,6 +70,7 @@ int main(void) {
       float sidebar_width = gamepad_list_sidebar_width(&gamepads);
       Rectangle content_area = {sidebar_width, 0, (float)w - sidebar_width, (float)h};
       bool fits = button_list_fits(content_area);
+      bool show_touchpad = fits && ds != NULL;
 
       layout_begin(w, h);
       CLAY({
@@ -88,7 +90,7 @@ int main(void) {
           },
         }) {
           if (fits) {
-            button_list_build();
+            button_list_build(show_touchpad);
           } else {
             CLAY({
               .id = layout_id("Controller"),
@@ -103,10 +105,11 @@ int main(void) {
       gamepad_list_sidebar(&gamepads, layout_rect("Sidebar"));
       Rectangle ctrl_rect = fits ? button_list_draw(gamepads.current) : layout_rect("Controller");
       display_gamepad(gamepads.current, ctrl_rect);
+      if (show_touchpad) touchpad_widget_draw(&ds_state);
 
       if (DEBUG_MODE) {
-        const char *dbg_ids[] = {"MiddleRow", "ControllerColumn", "ShoulderRow", "BottomRow", "Dpad", "Face", "Controller"};
-        for (int i = 0; i < 7; i++) {
+        const char *dbg_ids[] = {"MiddleRow", "ControllerColumn", "ShoulderRow", "BottomRow", "Dpad", "Face", "Controller", "Touchpad"};
+        for (int i = 0; i < 8; i++) {
           Rectangle r = layout_rect(dbg_ids[i]);
           DrawRectangleLinesEx(r, 2, RED);
           if (IsKeyPressed(KEY_P)) printf("%s: %.1f %.1f %.1f %.1f\n", dbg_ids[i], r.x, r.y, r.width, r.height);

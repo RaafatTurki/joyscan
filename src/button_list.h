@@ -5,6 +5,7 @@
 #include "../deps/raygui/src/raygui.h"
 #include "colors.h"
 #include "layout.h"
+#include "touchpad_widget.h"
 
 #define MINI_ITEM_WIDTH 60
 #define MINI_ITEM_HEIGHT 96
@@ -121,7 +122,7 @@ bool button_list_fits(Rectangle content_area) {
   return content_area.width >= min_width && content_area.height >= min_height;
 }
 
-void button_list_build(void) {
+void button_list_build(bool show_touchpad) {
   CLAY({
     .id = layout_id("MiddleRow"),
     .layout = { .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) }, .childGap = GROUP_PADDING, .childAlignment = { CLAY_ALIGN_X_CENTER, CLAY_ALIGN_Y_CENTER } },
@@ -158,6 +159,8 @@ void button_list_build(void) {
       }) {
         button_group_build("Middle", "MiddleItem", BUTTON_LIST_COUNT(BUTTON_LIST_MIDDLE));
       }
+
+      if (show_touchpad) touchpad_widget_build();
     }
 
     button_group_build("Face", "FaceItem", BUTTON_LIST_COUNT(BUTTON_LIST_FACE));

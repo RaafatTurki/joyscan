@@ -54,7 +54,8 @@ void LinuxHidapiPlatform::InvalidateHandle(FDeviceContext *Context) {
 void LinuxHidapiPlatform::Read(FDeviceContext *Context) {
   if (!Context->Handle) return;
   hid_device *Handle = static_cast<hid_device *>(Context->Handle);
-  int BytesRead = hid_read(Handle, Context->Buffer, sizeof(Context->Buffer));
+  int BytesRead;
+  while ((BytesRead = hid_read(Handle, Context->Buffer, sizeof(Context->Buffer))) > 0) {}
   if (BytesRead < 0) {
     Context->IsConnected = false;
   }

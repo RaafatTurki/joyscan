@@ -66,10 +66,27 @@ bool js_dualsense_update(JSDualSense *Device, float Delta, JSDualSenseState *Out
   OutState->accel[1] = Input->Accelerometer.Y;
   OutState->accel[2] = Input->Accelerometer.Z;
 
-  OutState->touch.active = Input->bIsTouching;
-  OutState->touch.finger_count = Input->TouchFingerCount;
-  OutState->touch.x = Input->TouchRadius.X != 0.0f ? Input->TouchPosition.X / Input->TouchRadius.X : 0.0f;
-  OutState->touch.y = Input->TouchRadius.Y != 0.0f ? Input->TouchPosition.Y / Input->TouchRadius.Y : 0.0f;
+  OutState->touch[0].active = Input->bIsTouching;
+  OutState->touch[0].x = Input->TouchRadius.X != 0.0f ? Input->TouchPosition.X / Input->TouchRadius.X : 0.0f;
+  OutState->touch[0].y = Input->TouchRadius.Y != 0.0f ? Input->TouchPosition.Y / Input->TouchRadius.Y : 0.0f;
+
+  // Upstream's ProcessTouchDualSense() has a byte-offset bug in its second
+  // touch point decode (swaps bytes 0x26/0x27 relative to the pattern it
+  // correctly uses for the first point), producing garbage x/y. Parsed here
+  // directly from the raw report instead, per the layout confirmed against
+  // linux/drivers/hid/hid-playstation.c's dualsense_touch_point[2].
+  FDeviceContext *RawContext = Device->Lib.GetMutableDeviceContext();
+  size_t Padding = RawContext->ConnectionType == EDSDeviceConnection::Bluetooth ? 2 : 1;
+  const unsigned char *HidInput = &RawContext->Buffer[Padding];
+
+  bool Point1Active = (HidInput[0x24] & 0x80) == 0;
+  OutState->touch[1].active = Point1Active;
+  if (Point1Active) {
+    float RawX = static_cast<float>(((HidInput[0x26] & 0x0F) << 8) | HidInput[0x25]);
+    float RawY = static_cast<float>((HidInput[0x27] << 4) | ((HidInput[0x26] & 0xF0) >> 4));
+    OutState->touch[1].x = Input->TouchRadius.X != 0.0f ? RawX / Input->TouchRadius.X : 0.0f;
+    OutState->touch[1].y = Input->TouchRadius.Y != 0.0f ? RawY / Input->TouchRadius.Y : 0.0f;
+  }
 
   return true;
 }
