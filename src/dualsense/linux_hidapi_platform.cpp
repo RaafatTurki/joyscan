@@ -8,6 +8,16 @@ constexpr unsigned short SONY_VENDOR_ID = 0x054C;
 constexpr unsigned short DUALSENSE_PRODUCT_ID = 0x0CE6;
 constexpr unsigned short DUALSENSE_EDGE_PRODUCT_ID = 0x0DF2;
 
+// The DualSense exposes more than one HID interface per physical unit (e.g. a
+// vendor-defined one alongside the actual gamepad reports); hidapi's Linux
+// hidraw backend returns one hid_device_info per interface, all sharing the
+// same VID/PID. Only the interface that declares the standard Generic
+// Desktop/Gamepad top-level collection carries the input reports this
+// library parses — filtering on it keeps Detect() to exactly one entry per
+// physical controller.
+constexpr unsigned short GENERIC_DESKTOP_USAGE_PAGE = 0x01;
+constexpr unsigned short GAMEPAD_USAGE = 0x05;
+
 EDSDeviceType DeviceTypeForProductId(unsigned short ProductId) {
   if (ProductId == DUALSENSE_PRODUCT_ID) return EDSDeviceType::DualSense;
   if (ProductId == DUALSENSE_EDGE_PRODUCT_ID) return EDSDeviceType::DualSenseEdge;
@@ -21,6 +31,7 @@ void LinuxHidapiPlatform::Detect(std::vector<FDeviceContext> &Devices) {
   for (hid_device_info *Info = List; Info != nullptr; Info = Info->next) {
     EDSDeviceType DeviceType = DeviceTypeForProductId(Info->product_id);
     if (DeviceType == EDSDeviceType::NotFound) continue;
+    if (Info->usage_page != GENERIC_DESKTOP_USAGE_PAGE || Info->usage != GAMEPAD_USAGE) continue;
 
     FDeviceContext Context;
     Context.Path = Info->path;

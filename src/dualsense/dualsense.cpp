@@ -25,22 +25,24 @@ void EnsurePlatformReady() {
 
 } // namespace
 
-JSDualSense *js_dualsense_create(void) {
+int js_dualsense_detect_all(JSDualSense *OutDevices[], int MaxDevices) {
   EnsurePlatformReady();
 
   std::vector<FDeviceContext> Found;
   IPlatformHardware::Get().Detect(Found);
 
+  int Count = 0;
   for (FDeviceContext &Context : Found) {
+    if (Count >= MaxDevices) break;
     if (!IPlatformHardware::Get().CreateHandle(&Context)) continue;
 
     JSDualSense *Device = new JSDualSense();
     Device->Lib.Initialize(Context);
     Device->Lib.EnableMotionSensor(true);
     Device->Lib.EnableTouch(true);
-    return Device;
+    OutDevices[Count++] = Device;
   }
-  return nullptr;
+  return Count;
 }
 
 void js_dualsense_destroy(JSDualSense *Device) {
@@ -65,6 +67,8 @@ bool js_dualsense_update(JSDualSense *Device, float Delta, JSDualSenseState *Out
   OutState->accel[0] = Input->Accelerometer.X;
   OutState->accel[1] = Input->Accelerometer.Y;
   OutState->accel[2] = Input->Accelerometer.Z;
+
+  OutState->touchpad_pressed = Input->bTouch;
 
   OutState->touch[0].active = Input->bIsTouching;
   OutState->touch[0].x = Input->TouchRadius.X != 0.0f ? Input->TouchPosition.X / Input->TouchRadius.X : 0.0f;

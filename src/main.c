@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "raylib.h"
 
 #define RAYGUI_IMPLEMENTATION
@@ -31,6 +33,26 @@ void apply_gui_theme(void) {
   GuiSetIconScale(2);
 }
 
+static bool is_dualsense_name(const char *name) {
+  return name && (strstr(name, "DualSense") || strstr(name, "Wireless Controller"));
+}
+
+// raylib and hidapi enumerate devices independently, with no shared id, so a
+// gamepad slot is matched to a JSDualSense by ordinal position among the
+// currently-known gamepads whose name looks like a DualSense — best-effort,
+// but stable in practice since both enumerations follow connection order.
+static int dualsense_slot_for_gamepad(GamepadList *gl, int gamepad_id) {
+  int slot = -1;
+  int count = 0;
+  for (int i = 0; i < vec_len(&gl->ids); i++) {
+    int id = vec_get(&gl->ids, i);
+    if (!is_dualsense_name(GetGamepadName(id))) continue;
+    if (id == gamepad_id) slot = count;
+    count++;
+  }
+  return slot;
+}
+
 int main(void) {
   int w = 1000;
   int h = 600;
@@ -48,8 +70,9 @@ int main(void) {
   GamepadList gamepads;
   gamepad_list_init(&gamepads);
 
-  JSDualSense *ds = js_dualsense_create();
-  JSDualSenseState ds_state = {0};
+  JSDualSense *ds[JS_DUALSENSE_MAX_DEVICES] = {0};
+  int ds_count = js_dualsense_detect_all(ds, JS_DUALSENSE_MAX_DEVICES);
+  JSDualSenseState ds_states[JS_DUALSENSE_MAX_DEVICES] = {0};
 
   while (!WindowShouldClose()) {
     BeginDrawing();
@@ -59,9 +82,11 @@ int main(void) {
 
     gamepad_list_update(&gamepads);
 
-    if (ds && !js_dualsense_update(ds, GetFrameTime(), &ds_state)) {
-      js_dualsense_destroy(ds);
-      ds = NULL;
+    for (int i = 0; i < ds_count; i++) {
+      if (ds[i] && !js_dualsense_update(ds[i], GetFrameTime(), &ds_states[i])) {
+        js_dualsense_destroy(ds[i]);
+        ds[i] = NULL;
+      }
     }
 
     if (gamepads.current == -1) {
@@ -70,7 +95,9 @@ int main(void) {
       float sidebar_width = gamepad_list_sidebar_width(&gamepads);
       Rectangle content_area = {sidebar_width, 0, (float)w - sidebar_width, (float)h};
       bool fits = button_list_fits(content_area);
-      bool show_touchpad = fits && ds != NULL;
+      int ds_slot = dualsense_slot_for_gamepad(&gamepads, gamepads.current);
+      JSDualSenseState *active_ds_state = (ds_slot >= 0 && ds_slot < ds_count && ds[ds_slot]) ? &ds_states[ds_slot] : NULL;
+      bool show_touchpad = fits && active_ds_state != NULL;
 
       layout_begin(w, h);
       CLAY({
@@ -105,7 +132,7 @@ int main(void) {
       gamepad_list_sidebar(&gamepads, layout_rect("Sidebar"));
       Rectangle ctrl_rect = fits ? button_list_draw(gamepads.current) : layout_rect("Controller");
       display_gamepad(gamepads.current, ctrl_rect);
-      if (show_touchpad) touchpad_widget_draw(&ds_state);
+      if (show_touchpad) touchpad_widget_draw(active_ds_state);
 
       if (DEBUG_MODE) {
         const char *dbg_ids[] = {"MiddleRow", "ControllerColumn", "ShoulderRow", "BottomRow", "Dpad", "Face", "Controller", "Touchpad"};
@@ -122,7 +149,7 @@ int main(void) {
     EndDrawing();
   }
 
-  js_dualsense_destroy(ds);
+  for (int i = 0; i < ds_count; i++) js_dualsense_destroy(ds[i]);
   controller_deinit();
   CloseWindow();
 

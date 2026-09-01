@@ -5,6 +5,8 @@
 
 typedef struct JSDualSense JSDualSense;
 
+#define JS_DUALSENSE_MAX_DEVICES 4
+
 typedef struct {
   bool connected;
 
@@ -15,6 +17,7 @@ typedef struct {
     bool active;
     float x, y;
   } touch[2];
+  bool touchpad_pressed;
 } JSDualSenseState;
 
 #define JS_PLAYER_LED_LEFT 0x01
@@ -27,7 +30,10 @@ typedef struct {
 extern "C" {
 #endif
 
-JSDualSense *js_dualsense_create(void);
+// Detects and opens a handle for every connected DualSense/DualSense Edge
+// controller (up to max_devices), writing one JSDualSense* per device into
+// out_devices. Returns the number found.
+int js_dualsense_detect_all(JSDualSense *out_devices[], int max_devices);
 void js_dualsense_destroy(JSDualSense *device);
 
 bool js_dualsense_update(JSDualSense *device, float delta, JSDualSenseState *out_state);
