@@ -3,8 +3,8 @@
 #include <raylib.h>
 
 typedef enum {
-  BUTTON,
-  ANALOG,
+  INPUT_BUTTON,
+  INPUT_ANALOG,
 } InputType;
 
 typedef struct {

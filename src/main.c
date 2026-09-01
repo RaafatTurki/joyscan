@@ -1,6 +1,9 @@
 #include <math.h>
 #include "raylib.h"
 
+#define RAYGUI_IMPLEMENTATION
+#include "../deps/raygui/src/raygui.h"
+
 #define DEBUG_MODE true
 #include "input.h"
 #include "log.h"
@@ -10,8 +13,9 @@
 
 #define CTRL_SVG_WIDTH 550
 #define CTRL_SVG_HEIGHT 503
-#define CTRL_SVG_X 30
-#define CTRL_SVG_Y 80
+
+#define TAB_BAR_HEIGHT 32
+#define MAX_GAMEPAD_TABS 8
 
 #define STICK_SLIDE 9.5f
 
@@ -32,6 +36,8 @@ Texture2D ctrl_tex;
 
 Vector2 left_stick_smooth = {0, 0};
 Vector2 right_stick_smooth = {0, 0};
+
+int gamepad_tab_hscroll = 0;
 
 static bool ctrl_id_is_pressable(const char *id) {
   for (int i = 0; i < CTRL_PRESSABLE_ID_COUNT; i++) {
@@ -71,41 +77,41 @@ void style_controller_svg(SvgController *sc) {
 
 void display_gamepad(int id) {
   // defining the buttons
-  Input LX = input_new(GAMEPAD_AXIS_LEFT_X,              YELLOW, 1, 18, 20, ANALOG, 0, "Left X Axis", NULL);
-  Input LY = input_new(GAMEPAD_AXIS_LEFT_Y,              YELLOW, 1, 19, 20, ANALOG, 0, "Left Y Axis", NULL);
-  Input RX = input_new(GAMEPAD_AXIS_RIGHT_X,             YELLOW, 1, 20, 20, ANALOG, 0, "Right X Axis", NULL);
-  Input RY = input_new(GAMEPAD_AXIS_RIGHT_Y,             YELLOW, 1, 21, 20, ANALOG, 0, "Right Y Axis", NULL);
+  Input LX = input_new(GAMEPAD_AXIS_LEFT_X,              YELLOW, 1, 18, 20, INPUT_ANALOG, 0, "Left X Axis", NULL);
+  Input LY = input_new(GAMEPAD_AXIS_LEFT_Y,              YELLOW, 1, 19, 20, INPUT_ANALOG, 0, "Left Y Axis", NULL);
+  Input RX = input_new(GAMEPAD_AXIS_RIGHT_X,             YELLOW, 1, 20, 20, INPUT_ANALOG, 0, "Right X Axis", NULL);
+  Input RY = input_new(GAMEPAD_AXIS_RIGHT_Y,             YELLOW, 1, 21, 20, INPUT_ANALOG, 0, "Right Y Axis", NULL);
 
   Input inputs[] = {
-    input_new(GAMEPAD_BUTTON_MIDDLE_RIGHT,      RED,    1, 1, 20, BUTTON, 0, "Start", "RMeta"),
-    input_new(GAMEPAD_BUTTON_MIDDLE_LEFT,       RED,    1, 2, 20, BUTTON, 0, "Select", "LMeta"),
-    input_new(GAMEPAD_BUTTON_MIDDLE,            GREEN,  1, 3, 20, BUTTON, 0, "Home", "Home"),
+    input_new(GAMEPAD_BUTTON_MIDDLE_RIGHT,      RED,    1, 1, 20, INPUT_BUTTON, 0, "Start", "RMeta"),
+    input_new(GAMEPAD_BUTTON_MIDDLE_LEFT,       RED,    1, 2, 20, INPUT_BUTTON, 0, "Select", "LMeta"),
+    input_new(GAMEPAD_BUTTON_MIDDLE,            GREEN,  1, 3, 20, INPUT_BUTTON, 0, "Home", "Home"),
 
-    input_new(GAMEPAD_BUTTON_RIGHT_FACE_UP,     GOLD,   1, 4, 20, BUTTON, 0, "Y", "BTop"),
-    input_new(GAMEPAD_BUTTON_RIGHT_FACE_RIGHT,  LIME,   1, 5, 20, BUTTON, 0, "B", "BRight"),
-    input_new(GAMEPAD_BUTTON_RIGHT_FACE_DOWN,   BLUE,   1, 6, 20, BUTTON, 0, "A", "BBottom"),
-    input_new(GAMEPAD_BUTTON_RIGHT_FACE_LEFT,   MAROON, 1, 7, 20, BUTTON, 0, "X", "BLeft"),
+    input_new(GAMEPAD_BUTTON_RIGHT_FACE_UP,     GOLD,   1, 4, 20, INPUT_BUTTON, 0, "Y", "BTop"),
+    input_new(GAMEPAD_BUTTON_RIGHT_FACE_RIGHT,  LIME,   1, 5, 20, INPUT_BUTTON, 0, "B", "BRight"),
+    input_new(GAMEPAD_BUTTON_RIGHT_FACE_DOWN,   BLUE,   1, 6, 20, INPUT_BUTTON, 0, "A", "BBottom"),
+    input_new(GAMEPAD_BUTTON_RIGHT_FACE_LEFT,   MAROON, 1, 7, 20, INPUT_BUTTON, 0, "X", "BLeft"),
 
-    input_new(GAMEPAD_BUTTON_LEFT_FACE_UP,      RED,    1, 8, 20, BUTTON, 0, "Up", "DUp"),
-    input_new(GAMEPAD_BUTTON_LEFT_FACE_DOWN,    RED,    1, 9, 20, BUTTON, 0, "Down", "DDown"),
-    input_new(GAMEPAD_BUTTON_LEFT_FACE_LEFT,    RED,    1, 10, 20, BUTTON, 0, "Left", "DLeft"),
-    input_new(GAMEPAD_BUTTON_LEFT_FACE_RIGHT,   RED,    1, 11, 20, BUTTON, 0, "Right", "DRight"),
+    input_new(GAMEPAD_BUTTON_LEFT_FACE_UP,      RED,    1, 8, 20, INPUT_BUTTON, 0, "Up", "DUp"),
+    input_new(GAMEPAD_BUTTON_LEFT_FACE_DOWN,    RED,    1, 9, 20, INPUT_BUTTON, 0, "Down", "DDown"),
+    input_new(GAMEPAD_BUTTON_LEFT_FACE_LEFT,    RED,    1, 10, 20, INPUT_BUTTON, 0, "Left", "DLeft"),
+    input_new(GAMEPAD_BUTTON_LEFT_FACE_RIGHT,   RED,    1, 11, 20, INPUT_BUTTON, 0, "Right", "DRight"),
 
-    input_new(GAMEPAD_BUTTON_RIGHT_THUMB,       RED,    1, 12, 20, BUTTON, 0, "Right Thumb", "RStickDot"),
-    input_new(GAMEPAD_BUTTON_LEFT_THUMB,        RED,    1, 13, 20, BUTTON, 0, "Left Thumb", "LStickDot"),
+    input_new(GAMEPAD_BUTTON_RIGHT_THUMB,       RED,    1, 12, 20, INPUT_BUTTON, 0, "Right Thumb", "RStickDot"),
+    input_new(GAMEPAD_BUTTON_LEFT_THUMB,        RED,    1, 13, 20, INPUT_BUTTON, 0, "Left Thumb", "LStickDot"),
 
-    input_new(GAMEPAD_BUTTON_LEFT_TRIGGER_1,    RED,    1, 14, 20, BUTTON, 0, "Left Trigger 1", "L1"),
-    input_new(GAMEPAD_BUTTON_LEFT_TRIGGER_2,    RED,    1, 15, 20, BUTTON, 0, "Left Trigger 2", "L2"),
-    input_new(GAMEPAD_BUTTON_RIGHT_TRIGGER_1,   RED,    1, 16, 20, BUTTON, 0, "Right Trigger 1", "R1"),
-    input_new(GAMEPAD_BUTTON_RIGHT_TRIGGER_2,   RED,    1, 17, 20, BUTTON, 0, "Right Trigger 2", "R2"),
+    input_new(GAMEPAD_BUTTON_LEFT_TRIGGER_1,    RED,    1, 14, 20, INPUT_BUTTON, 0, "Left Trigger 1", "L1"),
+    input_new(GAMEPAD_BUTTON_LEFT_TRIGGER_2,    RED,    1, 15, 20, INPUT_BUTTON, 0, "Left Trigger 2", "L2"),
+    input_new(GAMEPAD_BUTTON_RIGHT_TRIGGER_1,   RED,    1, 16, 20, INPUT_BUTTON, 0, "Right Trigger 1", "R1"),
+    input_new(GAMEPAD_BUTTON_RIGHT_TRIGGER_2,   RED,    1, 17, 20, INPUT_BUTTON, 0, "Right Trigger 2", "R2"),
 
     LX,
     LY,
     RX,
     RY,
 
-    input_new(GAMEPAD_AXIS_RIGHT_TRIGGER,       YELLOW, 1, 22, 20, ANALOG, -1, "Right Trigger Axis", NULL),
-    input_new(GAMEPAD_AXIS_LEFT_TRIGGER,        YELLOW, 1, 23, 20, ANALOG, -1, "Left Trigger Axis", NULL),
+    input_new(GAMEPAD_AXIS_RIGHT_TRIGGER,       YELLOW, 1, 22, 20, INPUT_ANALOG, -1, "Right Trigger Axis", NULL),
+    input_new(GAMEPAD_AXIS_LEFT_TRIGGER,        YELLOW, 1, 23, 20, INPUT_ANALOG, -1, "Left Trigger Axis", NULL),
   };
 
   const int INPUTS_COUNT = sizeof inputs / sizeof inputs[0];
@@ -116,7 +122,7 @@ void display_gamepad(int id) {
     Input input = inputs[i];
     bool is_trigger = input.svg_id != NULL && (strcmp(input.svg_id, "L2") == 0 || strcmp(input.svg_id, "R2") == 0);
     bool is_stick_dot = input.svg_id != NULL && (strcmp(input.svg_id, "LStickDot") == 0 || strcmp(input.svg_id, "RStickDot") == 0);
-    if (input.type == BUTTON && input.svg_id != NULL && !is_trigger && IsGamepadButtonDown(id, input.id)) {
+    if (input.type == INPUT_BUTTON && input.svg_id != NULL && !is_trigger && IsGamepadButtonDown(id, input.id)) {
       svg_set_fill(&ctrl_svg, input.svg_id, CTRL_PRESS_COLOR);
       if (is_stick_dot) svg_set_stroke(&ctrl_svg, input.svg_id, CTRL_BG_COLOR);
     }
@@ -150,7 +156,9 @@ void display_gamepad(int id) {
 
   svg_rasterize(&ctrl_svg);
   UpdateTexture(ctrl_tex, ctrl_svg.pixels);
-  DrawTexture(ctrl_tex, CTRL_SVG_X, CTRL_SVG_Y, WHITE);
+  int ctrl_x = (GetScreenWidth() - CTRL_SVG_WIDTH) / 2;
+  int ctrl_y = (GetScreenHeight() - CTRL_SVG_HEIGHT) / 2;
+  DrawTexture(ctrl_tex, ctrl_x, ctrl_y, WHITE);
 }
 
 int main(void) {
@@ -212,14 +220,18 @@ int main(void) {
     if (gamepad_id_curr == -1) {
       DrawText("No Controller Detected :c", 10, 10, 20, WHITE);
     } else {
-      DrawText(TextFormat("%d gamepads connected", vec_len(&gamepad_ids)), 400, (1)*20, 20, WHITE);
-
-      for (int i = 0; i < vec_len(&gamepad_ids); i++) {
-        int id = vec_get(&gamepad_ids, i);
-        Color color = WHITE;
-        if (id == gamepad_id_curr) color = RED;
-        DrawText(TextFormat("%s", GetGamepadName(id)), 400, (i+4)*20, 20, color);
+      int tab_count = vec_len(&gamepad_ids);
+      if (tab_count > MAX_GAMEPAD_TABS) tab_count = MAX_GAMEPAD_TABS;
+      const char *gamepad_names[MAX_GAMEPAD_TABS];
+      for (int i = 0; i < tab_count; i++) {
+        gamepad_names[i] = GetGamepadName(vec_get(&gamepad_ids, i));
       }
+      const char *tab_labels = TextJoin((char **)gamepad_names, tab_count, ";");
+
+      int active_tab = vec_has_val(&gamepad_ids, gamepad_id_curr);
+      GuiTabBar((Rectangle){0, 0, (float)w, TAB_BAR_HEIGHT}, tab_labels, &gamepad_tab_hscroll, &active_tab);
+      gamepad_id_curr = vec_get(&gamepad_ids, active_tab);
+
       display_gamepad(gamepad_id_curr);
     }
 

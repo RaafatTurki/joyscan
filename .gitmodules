@@ -4,3 +4,6 @@
 [submodule "deps/nanosvg"]
 	path = deps/nanosvg
 	url = https://github.com/memononen/nanosvg.git
+[submodule "deps/raygui"]
+	path = deps/raygui
+	url = https://github.com/raysan5/raygui.git
