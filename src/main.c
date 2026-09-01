@@ -10,6 +10,7 @@
 #include "controller.h"
 #include "gamepad_list.h"
 #include "button_list.h"
+#include "dualsense/dualsense.h"
 
 void apply_gui_theme(void) {
   GuiSetStyle(DEFAULT, BORDER_COLOR_NORMAL, ColorToInt(COLOR_OUTLINE));
@@ -46,6 +47,9 @@ int main(void) {
   GamepadList gamepads;
   gamepad_list_init(&gamepads);
 
+  JSDualSense *ds = js_dualsense_create();
+  JSDualSenseState ds_state = {0};
+
   while (!WindowShouldClose()) {
     BeginDrawing();
     ClearBackground(COLOR_BG);
@@ -53,6 +57,11 @@ int main(void) {
     h = GetScreenHeight();
 
     gamepad_list_update(&gamepads);
+
+    if (ds && !js_dualsense_update(ds, GetFrameTime(), &ds_state)) {
+      js_dualsense_destroy(ds);
+      ds = NULL;
+    }
 
     if (gamepads.current == -1) {
       DrawText("No Controller Detected :c", 10, 10, 20, COLOR_TEXT);
@@ -110,6 +119,7 @@ int main(void) {
     EndDrawing();
   }
 
+  js_dualsense_destroy(ds);
   controller_deinit();
   CloseWindow();
 

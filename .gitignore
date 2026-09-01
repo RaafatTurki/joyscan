@@ -1,1 +1,3 @@
 joyscan
+*.o
+deps/dualsense-multiplatform/build/

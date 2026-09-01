@@ -9,11 +9,27 @@ RAYLIB_LIB=$(RAYLIB_SRC)/libraylib.a
 CFLAGS=-I$(RAYLIB_SRC)
 LDLIBS=$(RAYLIB_LIB) -lm -lpthread -ldl -lrt -lX11
 
+DUALSENSE_SRC=deps/dualsense-multiplatform
+DUALSENSE_BUILD=$(DUALSENSE_SRC)/build
+DUALSENSE_LIB=$(DUALSENSE_BUILD)/Source/libGamepadCore.a
+DUALSENSE_INC=$(DUALSENSE_SRC)/Source/Public
+
+HIDAPI_SRC=deps/hidapi
+HIDAPI_INC=$(HIDAPI_SRC)/hidapi
+
 $(RAYLIB_LIB):
 	$(MAKE) -C $(RAYLIB_SRC) PLATFORM=PLATFORM_DESKTOP RAYLIB_LIBTYPE=STATIC
 
-compile: $(RAYLIB_LIB)
-	gcc $(CFLAGS) ./$(SRC)/main.c $(LDLIBS) -o $(NAME)
+$(DUALSENSE_LIB):
+	cmake -S $(DUALSENSE_SRC) -B $(DUALSENSE_BUILD) -DBUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release
+	cmake --build $(DUALSENSE_BUILD) --target GamepadCore -j
+
+compile: $(RAYLIB_LIB) $(DUALSENSE_LIB)
+	gcc $(CFLAGS) -c $(SRC)/main.c -o main.o
+	gcc $(CFLAGS) -I$(HIDAPI_INC) -c $(HIDAPI_SRC)/linux/hid.c -o hid.o
+	g++ -std=c++20 -I$(DUALSENSE_INC) -I$(HIDAPI_INC) -c $(SRC)/dualsense/dualsense.cpp -o dualsense.o
+	g++ -std=c++20 -I$(DUALSENSE_INC) -I$(HIDAPI_INC) -c $(SRC)/dualsense/linux_hidapi_platform.cpp -o linux_hidapi_platform.o
+	g++ main.o hid.o dualsense.o linux_hidapi_platform.o $(DUALSENSE_LIB) $(LDLIBS) -ludev -o $(NAME)
 
 run: compile
 	stdbuf -oL ./$(NAME)

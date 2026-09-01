@@ -10,3 +10,9 @@
 [submodule "deps/clay"]
 	path = deps/clay
 	url = https://github.com/nicbarker/clay.git
+[submodule "deps/dualsense-multiplatform"]
+	path = deps/dualsense-multiplatform
+	url = https://github.com/rafaelvaloto/Dualsense-Multiplatform.git
+[submodule "deps/hidapi"]
+	path = deps/hidapi
+	url = https://github.com/libusb/hidapi.git
