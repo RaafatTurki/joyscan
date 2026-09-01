@@ -77,6 +77,7 @@ void controller_init(void) {
     .format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
   };
   ctrl_tex = LoadTextureFromImage(ctrl_img);
+  SetTextureFilter(ctrl_tex, TEXTURE_FILTER_BILINEAR);
 }
 
 void controller_deinit(void) {
@@ -84,7 +85,7 @@ void controller_deinit(void) {
   UnloadTexture(ctrl_tex);
 }
 
-void display_gamepad(int id) {
+void display_gamepad(int id, Rectangle area) {
   Input LX = input_new(GAMEPAD_AXIS_LEFT_X,              YELLOW, 1, 18, 20, INPUT_ANALOG, 0, "Left X Axis", NULL);
   Input LY = input_new(GAMEPAD_AXIS_LEFT_Y,              YELLOW, 1, 19, 20, INPUT_ANALOG, 0, "Left Y Axis", NULL);
   Input RX = input_new(GAMEPAD_AXIS_RIGHT_X,             YELLOW, 1, 20, 20, INPUT_ANALOG, 0, "Right X Axis", NULL);
@@ -164,7 +165,13 @@ void display_gamepad(int id) {
 
   svg_rasterize(&ctrl_svg);
   UpdateTexture(ctrl_tex, ctrl_svg.pixels);
-  int ctrl_x = (GetScreenWidth() - CTRL_SVG_WIDTH) / 2;
-  int ctrl_y = (GetScreenHeight() - CTRL_SVG_HEIGHT) / 2;
-  DrawTexture(ctrl_tex, ctrl_x, ctrl_y, WHITE);
+
+  float scale = fminf(1.0f, fminf(area.width / CTRL_SVG_WIDTH, area.height / CTRL_SVG_HEIGHT));
+  float draw_w = CTRL_SVG_WIDTH * scale;
+  float draw_h = CTRL_SVG_HEIGHT * scale;
+  Vector2 ctrl_pos = {
+    roundf(area.x + (area.width - draw_w) / 2),
+    roundf(area.y + (area.height - draw_h) / 2),
+  };
+  DrawTextureEx(ctrl_tex, ctrl_pos, 0, scale, WHITE);
 }

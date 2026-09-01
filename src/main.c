@@ -34,14 +34,13 @@ int main(void) {
     if (gamepads.current == -1) {
       DrawText("No Controller Detected :c", 10, 10, 20, WHITE);
     } else {
-      gamepad_list_tab_bar(&gamepads, (Rectangle){0, 0, (float)w, TAB_BAR_HEIGHT});
-      display_gamepad(gamepads.current);
+      gamepad_list_sidebar(&gamepads, (Rectangle){0, 0, SIDEBAR_WIDTH, (float)h});
+      Rectangle ctrl_area = {SIDEBAR_WIDTH, 0, (float)w - SIDEBAR_WIDTH, (float)h};
+      display_gamepad(gamepads.current, ctrl_area);
     }
 
     gamepad_list_handle_keys(&gamepads);
 
-    DrawText("raafat.turki@protonmail.com", 10, h-30, 10, WHITE);
-    DrawText("muhammedturki@protonmail.com", 10, h-20, 10, WHITE);
     EndDrawing();
   }
 

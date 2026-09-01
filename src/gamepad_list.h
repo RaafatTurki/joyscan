@@ -5,19 +5,20 @@
 #include "log.h"
 #include "vector.h"
 
-#define MAX_GAMEPAD_TABS 8
-#define TAB_BAR_HEIGHT 32
+#define MAX_GAMEPAD_ROWS 8
+#define SIDEBAR_WIDTH 260
+#define SIDEBAR_FOOTER_HEIGHT 40
 
 typedef struct {
   Vector ids;
   int current;
-  int tab_hscroll;
+  int list_scroll;
 } GamepadList;
 
 void gamepad_list_init(GamepadList *gl) {
   vec_init(&gl->ids, 0);
   gl->current = -1;
-  gl->tab_hscroll = 0;
+  gl->list_scroll = 0;
 }
 
 void gamepad_list_update(GamepadList *gl) {
@@ -58,16 +59,20 @@ void gamepad_list_handle_keys(GamepadList *gl) {
   }
 }
 
-void gamepad_list_tab_bar(GamepadList *gl, Rectangle bounds) {
-  int tab_count = vec_len(&gl->ids);
-  if (tab_count > MAX_GAMEPAD_TABS) tab_count = MAX_GAMEPAD_TABS;
-  const char *gamepad_names[MAX_GAMEPAD_TABS];
-  for (int i = 0; i < tab_count; i++) {
+void gamepad_list_sidebar(GamepadList *gl, Rectangle bounds) {
+  int row_count = vec_len(&gl->ids);
+  if (row_count > MAX_GAMEPAD_ROWS) row_count = MAX_GAMEPAD_ROWS;
+  const char *gamepad_names[MAX_GAMEPAD_ROWS];
+  for (int i = 0; i < row_count; i++) {
     gamepad_names[i] = GetGamepadName(vec_get(&gl->ids, i));
   }
-  const char *tab_labels = TextJoin((char **)gamepad_names, tab_count, ";");
+  const char *row_labels = TextJoin((char **)gamepad_names, row_count, ";");
 
-  int active_tab = vec_has_val(&gl->ids, gl->current);
-  GuiTabBar(bounds, tab_labels, &gl->tab_hscroll, &active_tab);
-  gl->current = vec_get(&gl->ids, active_tab);
+  Rectangle list_bounds = { bounds.x, bounds.y, bounds.width, bounds.height - SIDEBAR_FOOTER_HEIGHT };
+  int active_row = vec_has_val(&gl->ids, gl->current);
+  GuiListView(list_bounds, row_labels, &gl->list_scroll, &active_row);
+  gl->current = vec_get(&gl->ids, active_row);
+
+  DrawText("raafat.turki@protonmail.com", (int)bounds.x + 10, (int)(bounds.y + bounds.height) - 30, 10, WHITE);
+  DrawText("muhammedturki@protonmail.com", (int)bounds.x + 10, (int)(bounds.y + bounds.height) - 20, 10, WHITE);
 }
