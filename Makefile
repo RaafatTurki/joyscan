@@ -31,16 +31,11 @@ compile: $(RAYLIB_LIB) $(DUALSENSE_LIB)
 	g++ -std=c++20 -I$(DUALSENSE_INC) -I$(HIDAPI_INC) -c $(SRC)/dualsense/linux_hidapi_platform.cpp -o linux_hidapi_platform.o
 	g++ main.o hid.o dualsense.o linux_hidapi_platform.o $(DUALSENSE_LIB) $(LDLIBS) -ludev -o $(NAME)
 
+clean:
+	rm -f *.o $(NAME)
+
 run: compile
 	stdbuf -oL ./$(NAME)
 
 debug: compile
 	stdbuf -oL ./$(NAME) | grep -E $(FILTER)
-
-# test stuff
-compile_test:
-	gcc ./$(TEST_SRC)/main.c -o test_bin
-	# gcc $(CFLAGS) ./$(TEST_SRC)/main.c -o test_bin
-
-run_test: compile_test
-	stdbuf -oL ./test_bin
