@@ -2,6 +2,7 @@
 
 #include "raylib.h"
 #include "../deps/raygui/src/raygui.h"
+#include "colors.h"
 #include "log.h"
 #include "vector.h"
 
@@ -73,6 +74,6 @@ void gamepad_list_sidebar(GamepadList *gl, Rectangle bounds) {
   GuiListView(list_bounds, row_labels, &gl->list_scroll, &active_row);
   gl->current = vec_get(&gl->ids, active_row);
 
-  DrawText("raafat.turki@protonmail.com", (int)bounds.x + 10, (int)(bounds.y + bounds.height) - 30, 10, WHITE);
-  DrawText("muhammedturki@protonmail.com", (int)bounds.x + 10, (int)(bounds.y + bounds.height) - 20, 10, WHITE);
+  DrawText("raafat.turki@protonmail.com", (int)bounds.x + 10, (int)(bounds.y + bounds.height) - 30, 10, COLOR_TEXT);
+  DrawText("muhammedturki@protonmail.com", (int)bounds.x + 10, (int)(bounds.y + bounds.height) - 20, 10, COLOR_TEXT);
 }

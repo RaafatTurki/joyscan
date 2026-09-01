@@ -3,6 +3,7 @@
 #include <math.h>
 #include <string.h>
 #include "raylib.h"
+#include "colors.h"
 #include "input.h"
 #include "utils.h"
 #include "svg.h"
@@ -20,9 +21,6 @@ static const char *CTRL_PRESSABLE_IDS[] = {
   "LeftStick", "RightStick",
 };
 #define CTRL_PRESSABLE_ID_COUNT (sizeof(CTRL_PRESSABLE_IDS) / sizeof(CTRL_PRESSABLE_IDS[0]))
-#define CTRL_OUTLINE_COLOR (Color){78, 89, 111, 255}
-#define CTRL_BG_COLOR BLACK
-#define CTRL_PRESS_COLOR WHITE
 
 SvgController ctrl_svg;
 Texture2D ctrl_tex;
@@ -42,7 +40,7 @@ void style_controller_svg(SvgController *sc) {
 
   for (size_t i = 0; i < CTRL_PRESSABLE_ID_COUNT; i++) {
     svg_hide(sc, CTRL_PRESSABLE_IDS[i]);
-    svg_set_stroke(sc, CTRL_PRESSABLE_IDS[i], CTRL_PRESS_COLOR);
+    svg_set_stroke(sc, CTRL_PRESSABLE_IDS[i], COLOR_PRESS);
   }
 
   svg_hide(sc, "LStickDot");
@@ -55,11 +53,11 @@ void style_controller_svg(SvgController *sc) {
 
     if (strcmp(shape->id, "Outline") == 0) {
       shape->fill.type = NSVG_PAINT_COLOR;
-      shape->fill.color = NSVG_RGB(CTRL_BG_COLOR.r, CTRL_BG_COLOR.g, CTRL_BG_COLOR.b) | ((unsigned int)CTRL_BG_COLOR.a << 24);
+      shape->fill.color = NSVG_RGB(COLOR_BG.r, COLOR_BG.g, COLOR_BG.b) | ((unsigned int)COLOR_BG.a << 24);
     }
     if (shape->stroke.type != NSVG_PAINT_NONE) {
       shape->stroke.type = NSVG_PAINT_COLOR;
-      shape->stroke.color = NSVG_RGB(CTRL_OUTLINE_COLOR.r, CTRL_OUTLINE_COLOR.g, CTRL_OUTLINE_COLOR.b) | ((unsigned int)CTRL_OUTLINE_COLOR.a << 24);
+      shape->stroke.color = NSVG_RGB(COLOR_OUTLINE.r, COLOR_OUTLINE.g, COLOR_OUTLINE.b) | ((unsigned int)COLOR_OUTLINE.a << 24);
     }
   }
 
@@ -132,8 +130,8 @@ void display_gamepad(int id, Rectangle area) {
     bool is_trigger = input.svg_id != NULL && (strcmp(input.svg_id, "L2") == 0 || strcmp(input.svg_id, "R2") == 0);
     bool is_stick_dot = input.svg_id != NULL && (strcmp(input.svg_id, "LStickDot") == 0 || strcmp(input.svg_id, "RStickDot") == 0);
     if (input.type == INPUT_BUTTON && input.svg_id != NULL && !is_trigger && IsGamepadButtonDown(id, input.id)) {
-      svg_set_fill(&ctrl_svg, input.svg_id, CTRL_PRESS_COLOR);
-      if (is_stick_dot) svg_set_stroke(&ctrl_svg, input.svg_id, CTRL_BG_COLOR);
+      svg_set_fill(&ctrl_svg, input.svg_id, COLOR_PRESS);
+      if (is_stick_dot) svg_set_stroke(&ctrl_svg, input.svg_id, COLOR_BG);
     }
   }
 
@@ -141,8 +139,8 @@ void display_gamepad(int id, Rectangle area) {
   float rt_fraction = (GetGamepadAxisMovement(id, GAMEPAD_AXIS_RIGHT_TRIGGER) + 1) / 2;
   if (IsGamepadButtonDown(id, GAMEPAD_BUTTON_LEFT_TRIGGER_2)) lt_fraction = 1;
   if (IsGamepadButtonDown(id, GAMEPAD_BUTTON_RIGHT_TRIGGER_2)) rt_fraction = 1;
-  svg_set_fill_fraction(&ctrl_svg, "L2", CTRL_PRESS_COLOR, lt_fraction);
-  svg_set_fill_fraction(&ctrl_svg, "R2", CTRL_PRESS_COLOR, rt_fraction);
+  svg_set_fill_fraction(&ctrl_svg, "L2", COLOR_PRESS, lt_fraction);
+  svg_set_fill_fraction(&ctrl_svg, "R2", COLOR_PRESS, rt_fraction);
 
   Vector2 lv = (Vector2){GetGamepadAxisMovement(id, LX.id), GetGamepadAxisMovement(id, LY.id)};
   Vector2 rv = (Vector2){GetGamepadAxisMovement(id, RX.id), GetGamepadAxisMovement(id, RY.id)};
@@ -158,10 +156,10 @@ void display_gamepad(int id, Rectangle area) {
   svg_translate(&ctrl_svg, "RStickDot", right_stick_smooth.x * STICK_SLIDE, right_stick_smooth.y * STICK_SLIDE);
 
   float left_stick_mag = sqrtf(left_stick_smooth.x*left_stick_smooth.x + left_stick_smooth.y*left_stick_smooth.y);
-  svg_set_fill_fraction(&ctrl_svg, "LeftStick", CTRL_PRESS_COLOR, left_stick_mag);
+  svg_set_fill_fraction(&ctrl_svg, "LeftStick", COLOR_PRESS, left_stick_mag);
 
   float right_stick_mag = sqrtf(right_stick_smooth.x*right_stick_smooth.x + right_stick_smooth.y*right_stick_smooth.y);
-  svg_set_fill_fraction(&ctrl_svg, "RightStick", CTRL_PRESS_COLOR, right_stick_mag);
+  svg_set_fill_fraction(&ctrl_svg, "RightStick", COLOR_PRESS, right_stick_mag);
 
   svg_rasterize(&ctrl_svg);
   UpdateTexture(ctrl_tex, ctrl_svg.pixels);
@@ -173,5 +171,5 @@ void display_gamepad(int id, Rectangle area) {
     roundf(area.x + (area.width - draw_w) / 2),
     roundf(area.y + (area.height - draw_h) / 2),
   };
-  DrawTextureEx(ctrl_tex, ctrl_pos, 0, scale, WHITE);
+  DrawTextureEx(ctrl_tex, ctrl_pos, 0, scale, COLOR_TEXT);
 }
