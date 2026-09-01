@@ -6,9 +6,9 @@
 #include "utils.h"
 
 #define NANOSVG_IMPLEMENTATION
-#include "../deps/nanosvg/nanosvg.h"
+#include "../deps/nanosvg/src/nanosvg.h"
 #define NANOSVGRAST_IMPLEMENTATION
-#include "../deps/nanosvg/nanosvgrast.h"
+#include "../deps/nanosvg/src/nanosvgrast.h"
 
 #define SVG_MAX_SHAPES 64
 
