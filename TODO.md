@@ -4,5 +4,6 @@
 - look into jstest calibration https://gitlab.com/jstest-gtk/jstest-gtk/-/tree/master/src
 
 - fix ui
+- show something in the controllers list when a non-focused controller has activity
 - display connection type
 - extra features, lightbar, leds, gyro, adaptive triggers, mic, heptics, touch pad

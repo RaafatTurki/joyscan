@@ -8,15 +8,10 @@
 #include "utils.h"
 #include "svg.h"
 
-#if defined(__linux__)
-#define PLATFORM "linux"
-#endif
-
 #define CTRL_SVG_WIDTH 550
 #define CTRL_SVG_HEIGHT 503
 #define CTRL_SVG_X 30
 #define CTRL_SVG_Y 80
-#define CTRL_PANEL_X 620
 
 #define STICK_SLIDE 9.5f
 
@@ -74,7 +69,7 @@ void style_controller_svg(SvgController *sc) {
   svg_commit(sc);
 }
 
-void display_gamepad(int id, float deltaTime) {
+void display_gamepad(int id) {
   // defining the buttons
   Input LX = input_new(GAMEPAD_AXIS_LEFT_X,              YELLOW, 1, 18, 20, ANALOG, 0, "Left X Axis", NULL);
   Input LY = input_new(GAMEPAD_AXIS_LEFT_Y,              YELLOW, 1, 19, 20, ANALOG, 0, "Left Y Axis", NULL);
@@ -156,30 +151,11 @@ void display_gamepad(int id, float deltaTime) {
   svg_rasterize(&ctrl_svg);
   UpdateTexture(ctrl_tex, ctrl_svg.pixels);
   DrawTexture(ctrl_tex, CTRL_SVG_X, CTRL_SVG_Y, WHITE);
-
-  for (int i = 0; i < INPUTS_COUNT; i++) {
-    Input input = inputs[i];
-
-    if (input.type == BUTTON) {
-      Color color = WHITE;
-      if (IsGamepadButtonDown(id, input.id)) color = input.color;
-      DrawText(TextFormat("%s", input.name), CTRL_PANEL_X + input.x*20, input.y*20, input.s, color);
-    }
-
-    if (input.type == ANALOG) {
-      Color color = WHITE;
-      if (GetGamepadAxisMovement(id, input.id) != input.idle_value) color = input.color;
-      DrawText(TextFormat("%s", input.name), CTRL_PANEL_X + input.x*20, input.y*20, input.s, color);
-      DrawText(TextFormat("%f", (float)GetGamepadAxisMovement(id, input.id)), CTRL_PANEL_X + (input.x*20)+(12*20), input.y*20, input.s, color);
-    }
-  }
 }
 
 int main(void) {
   int w = 1000;
   int h = 600;
-  double currTime = GetTime();
-  float deltaTime = GetFrameTime();
 
   SetConfigFlags(FLAG_WINDOW_RESIZABLE);
   SetConfigFlags(FLAG_MSAA_4X_HINT);
@@ -203,9 +179,6 @@ int main(void) {
   int gamepad_id_curr = -1;
 
   while (!WindowShouldClose()) {
-    deltaTime = GetTime() - currTime;
-    currTime = GetTime();
-
     BeginDrawing();
     ClearBackground(CTRL_BG_COLOR);
     w = GetScreenWidth();
@@ -247,7 +220,7 @@ int main(void) {
         if (id == gamepad_id_curr) color = RED;
         DrawText(TextFormat("%s", GetGamepadName(id)), 400, (i+4)*20, 20, color);
       }
-      display_gamepad(gamepad_id_curr, deltaTime);
+      display_gamepad(gamepad_id_curr);
     }
 
     // gamepad switching
@@ -260,14 +233,6 @@ int main(void) {
       int i = vec_has_val(&gamepad_ids, gamepad_id_curr);
       int prev_i = vec_prev(&gamepad_ids, i);
       gamepad_id_curr = vec_get(&gamepad_ids, prev_i);
-    }
-
-    // calibration
-    if (PLATFORM != "linux") {
-      DrawText("Calibration is only available on linux :P", w-420, h-40, 20, WHITE);
-    } else {
-
-      DrawText("Calibration", w-130, h-40, 20, WHITE);
     }
 
     DrawText("raafat.turki@protonmail.com", 10, h-30, 10, WHITE);
