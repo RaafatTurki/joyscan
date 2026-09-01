@@ -2,3 +2,7 @@
 - look into native linux support https://gist.github.com/jasonwhite/c5b2048c15993d285130
 - info joystick API https://www.kernel.org/doc/Documentation/input/joystick-api.txt
 - look into jstest calibration https://gitlab.com/jstest-gtk/jstest-gtk/-/tree/master/src
+
+- fix ui
+- display connection type
+- extra features, lightbar, leds, gyro, adaptive triggers, mic, heptics, touch pad

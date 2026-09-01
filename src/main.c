@@ -1,5 +1,4 @@
 #include <math.h>
-#include <stdio.h>
 #include "raylib.h"
 
 #define DEBUG_MODE true
@@ -7,129 +6,173 @@
 #include "log.h"
 #include "vector.h"
 #include "utils.h"
+#include "svg.h"
 
 #if defined(__linux__)
 #define PLATFORM "linux"
 #endif
 
-Vector2 p1 = {550, 300};
-Vector2 p2 = {800, 300};
+#define CTRL_SVG_WIDTH 550
+#define CTRL_SVG_HEIGHT 503
+#define CTRL_SVG_X 30
+#define CTRL_SVG_Y 80
+#define CTRL_PANEL_X 620
 
-Vector2 c1 = {0, 0};
-Vector2 ct1 = {0, 0};
-Vector2 c2 = {0, 0};
-Vector2 ct2 = {0, 0};
+#define STICK_SLIDE 9.5f
 
-float lerpAmount = .0f;
+static const char *CTRL_PRESSABLE_IDS[] = {
+  "BTop", "BRight", "BBottom", "BLeft",
+  "DUp", "DRight", "DDown", "DLeft",
+  "LMeta", "RMeta", "Home",
+  "L1", "R1", "L2", "R2",
+  "LeftStick", "RightStick",
+};
+#define CTRL_PRESSABLE_ID_COUNT (sizeof(CTRL_PRESSABLE_IDS) / sizeof(CTRL_PRESSABLE_IDS[0]))
+#define CTRL_OUTLINE_COLOR (Color){78, 89, 111, 255}
+#define CTRL_BG_COLOR BLACK
+#define CTRL_PRESS_COLOR WHITE
+
+SvgController ctrl_svg;
+Texture2D ctrl_tex;
+
+Vector2 left_stick_smooth = {0, 0};
+Vector2 right_stick_smooth = {0, 0};
+
+static bool ctrl_id_is_pressable(const char *id) {
+  for (int i = 0; i < CTRL_PRESSABLE_ID_COUNT; i++) {
+    if (strcmp(id, CTRL_PRESSABLE_IDS[i]) == 0) return true;
+  }
+  return false;
+}
+
+void style_controller_svg(SvgController *sc) {
+  svg_set_stroke_width(sc, 3.0f);
+
+  for (int i = 0; i < CTRL_PRESSABLE_ID_COUNT; i++) {
+    svg_hide(sc, CTRL_PRESSABLE_IDS[i]);
+    svg_set_stroke(sc, CTRL_PRESSABLE_IDS[i], CTRL_PRESS_COLOR);
+  }
+
+  svg_hide(sc, "LStickDot");
+  svg_hide(sc, "RStickDot");
+
+  for (int i = 0; i < sc->snapshot_count; i++) {
+    NSVGshape *shape = sc->snapshots[i].shape;
+    if (ctrl_id_is_pressable(shape->id)) continue;
+    if (strcmp(shape->id, "LStickDot") == 0 || strcmp(shape->id, "RStickDot") == 0) continue;
+
+    if (strcmp(shape->id, "Outline") == 0) {
+      shape->fill.type = NSVG_PAINT_COLOR;
+      shape->fill.color = NSVG_RGB(CTRL_BG_COLOR.r, CTRL_BG_COLOR.g, CTRL_BG_COLOR.b) | ((unsigned int)CTRL_BG_COLOR.a << 24);
+    }
+    if (shape->stroke.type != NSVG_PAINT_NONE) {
+      shape->stroke.type = NSVG_PAINT_COLOR;
+      shape->stroke.color = NSVG_RGB(CTRL_OUTLINE_COLOR.r, CTRL_OUTLINE_COLOR.g, CTRL_OUTLINE_COLOR.b) | ((unsigned int)CTRL_OUTLINE_COLOR.a << 24);
+    }
+  }
+
+  svg_commit(sc);
+}
 
 void display_gamepad(int id, float deltaTime) {
   // defining the buttons
-  Input LX = input_new(GAMEPAD_AXIS_LEFT_X,              YELLOW, 1, 18, 20, ANALOG, 0, "Left X Axis");
-  Input LY = input_new(GAMEPAD_AXIS_LEFT_Y,              YELLOW, 1, 19, 20, ANALOG, 0, "Left Y Axis");
-  Input RX = input_new(GAMEPAD_AXIS_RIGHT_X,             YELLOW, 1, 20, 20, ANALOG, 0, "Right X Axis");
-  Input RY = input_new(GAMEPAD_AXIS_RIGHT_Y,             YELLOW, 1, 21, 20, ANALOG, 0, "Right Y Axis");
+  Input LX = input_new(GAMEPAD_AXIS_LEFT_X,              YELLOW, 1, 18, 20, ANALOG, 0, "Left X Axis", NULL);
+  Input LY = input_new(GAMEPAD_AXIS_LEFT_Y,              YELLOW, 1, 19, 20, ANALOG, 0, "Left Y Axis", NULL);
+  Input RX = input_new(GAMEPAD_AXIS_RIGHT_X,             YELLOW, 1, 20, 20, ANALOG, 0, "Right X Axis", NULL);
+  Input RY = input_new(GAMEPAD_AXIS_RIGHT_Y,             YELLOW, 1, 21, 20, ANALOG, 0, "Right Y Axis", NULL);
 
   Input inputs[] = {
-    input_new(GAMEPAD_BUTTON_MIDDLE_RIGHT,      RED,    1, 1, 20, BUTTON, 0, "Start"),
-    input_new(GAMEPAD_BUTTON_MIDDLE_LEFT,       RED,    1, 2, 20, BUTTON, 0, "Select"),
-    input_new(GAMEPAD_BUTTON_MIDDLE,            GREEN,  1, 3, 20, BUTTON, 0, "Home"),
+    input_new(GAMEPAD_BUTTON_MIDDLE_RIGHT,      RED,    1, 1, 20, BUTTON, 0, "Start", "RMeta"),
+    input_new(GAMEPAD_BUTTON_MIDDLE_LEFT,       RED,    1, 2, 20, BUTTON, 0, "Select", "LMeta"),
+    input_new(GAMEPAD_BUTTON_MIDDLE,            GREEN,  1, 3, 20, BUTTON, 0, "Home", "Home"),
 
-    input_new(GAMEPAD_BUTTON_RIGHT_FACE_UP,     GOLD,   1, 4, 20, BUTTON, 0, "Y"),
-    input_new(GAMEPAD_BUTTON_RIGHT_FACE_RIGHT,  LIME,   1, 5, 20, BUTTON, 0, "B"),
-    input_new(GAMEPAD_BUTTON_RIGHT_FACE_DOWN,   BLUE,   1, 6, 20, BUTTON, 0, "A"),
-    input_new(GAMEPAD_BUTTON_RIGHT_FACE_LEFT,   MAROON, 1, 7, 20, BUTTON, 0, "X"),
+    input_new(GAMEPAD_BUTTON_RIGHT_FACE_UP,     GOLD,   1, 4, 20, BUTTON, 0, "Y", "BTop"),
+    input_new(GAMEPAD_BUTTON_RIGHT_FACE_RIGHT,  LIME,   1, 5, 20, BUTTON, 0, "B", "BRight"),
+    input_new(GAMEPAD_BUTTON_RIGHT_FACE_DOWN,   BLUE,   1, 6, 20, BUTTON, 0, "A", "BBottom"),
+    input_new(GAMEPAD_BUTTON_RIGHT_FACE_LEFT,   MAROON, 1, 7, 20, BUTTON, 0, "X", "BLeft"),
 
-    // input_new(GAMEPAD_BUTTON_RIGHT_FACE_UP,     GOLD,   1, 4, 20, BUTTON, 0, "X"),
-    // input_new(GAMEPAD_BUTTON_RIGHT_FACE_RIGHT,  LIME,   1, 5, 20, BUTTON, 0, "O"),
-    // input_new(GAMEPAD_BUTTON_RIGHT_FACE_DOWN,   BLUE,   1, 6, 20, BUTTON, 0, "□"),
-    // input_new(GAMEPAD_BUTTON_RIGHT_FACE_LEFT,   MAROON, 1, 7, 20, BUTTON, 0, "∆"),
+    input_new(GAMEPAD_BUTTON_LEFT_FACE_UP,      RED,    1, 8, 20, BUTTON, 0, "Up", "DUp"),
+    input_new(GAMEPAD_BUTTON_LEFT_FACE_DOWN,    RED,    1, 9, 20, BUTTON, 0, "Down", "DDown"),
+    input_new(GAMEPAD_BUTTON_LEFT_FACE_LEFT,    RED,    1, 10, 20, BUTTON, 0, "Left", "DLeft"),
+    input_new(GAMEPAD_BUTTON_LEFT_FACE_RIGHT,   RED,    1, 11, 20, BUTTON, 0, "Right", "DRight"),
 
-    input_new(GAMEPAD_BUTTON_LEFT_FACE_UP,      RED,    1, 8, 20, BUTTON, 0, "Up"),
-    input_new(GAMEPAD_BUTTON_LEFT_FACE_DOWN,    RED,    1, 9, 20, BUTTON, 0, "Down"),
-    input_new(GAMEPAD_BUTTON_LEFT_FACE_LEFT,    RED,    1, 10, 20, BUTTON, 0, "Left"),
-    input_new(GAMEPAD_BUTTON_LEFT_FACE_RIGHT,   RED,    1, 11, 20, BUTTON, 0, "Right"),
+    input_new(GAMEPAD_BUTTON_RIGHT_THUMB,       RED,    1, 12, 20, BUTTON, 0, "Right Thumb", "RStickDot"),
+    input_new(GAMEPAD_BUTTON_LEFT_THUMB,        RED,    1, 13, 20, BUTTON, 0, "Left Thumb", "LStickDot"),
 
-    input_new(GAMEPAD_BUTTON_RIGHT_THUMB,       RED,    1, 12, 20, BUTTON, 0, "Right Thumb"),
-    input_new(GAMEPAD_BUTTON_LEFT_THUMB,        RED,    1, 13, 20, BUTTON, 0, "Left Thumb"),
-
-    input_new(GAMEPAD_BUTTON_LEFT_TRIGGER_1,    RED,    1, 14, 20, BUTTON, 0, "Left Trigger 1"),
-    input_new(GAMEPAD_BUTTON_LEFT_TRIGGER_2,    RED,    1, 15, 20, BUTTON, 0, "Left Trigger 2"),
-    input_new(GAMEPAD_BUTTON_RIGHT_TRIGGER_1,   RED,    1, 16, 20, BUTTON, 0, "Right Trigger 1"),
-    input_new(GAMEPAD_BUTTON_RIGHT_TRIGGER_2,   RED,    1, 17, 20, BUTTON, 0, "Right Trigger 2"),
+    input_new(GAMEPAD_BUTTON_LEFT_TRIGGER_1,    RED,    1, 14, 20, BUTTON, 0, "Left Trigger 1", "L1"),
+    input_new(GAMEPAD_BUTTON_LEFT_TRIGGER_2,    RED,    1, 15, 20, BUTTON, 0, "Left Trigger 2", "L2"),
+    input_new(GAMEPAD_BUTTON_RIGHT_TRIGGER_1,   RED,    1, 16, 20, BUTTON, 0, "Right Trigger 1", "R1"),
+    input_new(GAMEPAD_BUTTON_RIGHT_TRIGGER_2,   RED,    1, 17, 20, BUTTON, 0, "Right Trigger 2", "R2"),
 
     LX,
     LY,
     RX,
     RY,
 
-    input_new(GAMEPAD_AXIS_RIGHT_TRIGGER,       YELLOW, 1, 22, 20, ANALOG, -1, "Right Trigger Axis"),
-    input_new(GAMEPAD_AXIS_LEFT_TRIGGER,        YELLOW, 1, 23, 20, ANALOG, -1, "Left Trigger Axis"),
+    input_new(GAMEPAD_AXIS_RIGHT_TRIGGER,       YELLOW, 1, 22, 20, ANALOG, -1, "Right Trigger Axis", NULL),
+    input_new(GAMEPAD_AXIS_LEFT_TRIGGER,        YELLOW, 1, 23, 20, ANALOG, -1, "Left Trigger Axis", NULL),
   };
 
-  // dot in circle stuff
-  int rad = 100;
+  const int INPUTS_COUNT = sizeof inputs / sizeof inputs[0];
+
+  svg_reset(&ctrl_svg);
+
+  for (int i = 0; i < INPUTS_COUNT; i++) {
+    Input input = inputs[i];
+    bool is_trigger = input.svg_id != NULL && (strcmp(input.svg_id, "L2") == 0 || strcmp(input.svg_id, "R2") == 0);
+    bool is_stick_dot = input.svg_id != NULL && (strcmp(input.svg_id, "LStickDot") == 0 || strcmp(input.svg_id, "RStickDot") == 0);
+    if (input.type == BUTTON && input.svg_id != NULL && !is_trigger && IsGamepadButtonDown(id, input.id)) {
+      svg_set_fill(&ctrl_svg, input.svg_id, CTRL_PRESS_COLOR);
+      if (is_stick_dot) svg_set_stroke(&ctrl_svg, input.svg_id, CTRL_BG_COLOR);
+    }
+  }
+
+  float lt_fraction = (GetGamepadAxisMovement(id, GAMEPAD_AXIS_LEFT_TRIGGER) + 1) / 2;
+  float rt_fraction = (GetGamepadAxisMovement(id, GAMEPAD_AXIS_RIGHT_TRIGGER) + 1) / 2;
+  if (IsGamepadButtonDown(id, GAMEPAD_BUTTON_LEFT_TRIGGER_2)) lt_fraction = 1;
+  if (IsGamepadButtonDown(id, GAMEPAD_BUTTON_RIGHT_TRIGGER_2)) rt_fraction = 1;
+  svg_set_fill_fraction(&ctrl_svg, "L2", CTRL_PRESS_COLOR, lt_fraction);
+  svg_set_fill_fraction(&ctrl_svg, "R2", CTRL_PRESS_COLOR, rt_fraction);
 
   Vector2 lv = (Vector2){GetGamepadAxisMovement(id, LX.id), GetGamepadAxisMovement(id, LY.id)};
   Vector2 rv = (Vector2){GetGamepadAxisMovement(id, RX.id), GetGamepadAxisMovement(id, RY.id)};
 
-  ct1.x = lv.x*rad;
-  c1.x = lerp(c1.x, ct1.x, 0.5);
-  ct1.y = lv.y*rad;
-  c1.y = lerp(c1.y, ct1.y, 0.5);
+  left_stick_smooth.x = lerp(left_stick_smooth.x, lv.x, 0.5);
+  left_stick_smooth.y = lerp(left_stick_smooth.y, lv.y, 0.5);
+  right_stick_smooth.x = lerp(right_stick_smooth.x, rv.x, 0.5);
+  right_stick_smooth.y = lerp(right_stick_smooth.y, rv.y, 0.5);
 
-  ct2.x = rv.x*rad;
-  c2.x = lerp(c2.x, ct2.x, 0.5);
-  ct2.y = rv.y*rad;
-  c2.y = lerp(c2.y, ct2.y, 0.5);
+  svg_translate(&ctrl_svg, "LeftStick", left_stick_smooth.x * STICK_SLIDE, left_stick_smooth.y * STICK_SLIDE);
+  svg_translate(&ctrl_svg, "LStickDot", left_stick_smooth.x * STICK_SLIDE, left_stick_smooth.y * STICK_SLIDE);
+  svg_translate(&ctrl_svg, "RightStick", right_stick_smooth.x * STICK_SLIDE, right_stick_smooth.y * STICK_SLIDE);
+  svg_translate(&ctrl_svg, "RStickDot", right_stick_smooth.x * STICK_SLIDE, right_stick_smooth.y * STICK_SLIDE);
 
-  lerpAmount = 0.5;
+  float left_stick_mag = sqrtf(left_stick_smooth.x*left_stick_smooth.x + left_stick_smooth.y*left_stick_smooth.y);
+  svg_set_fill_fraction(&ctrl_svg, "LeftStick", CTRL_PRESS_COLOR, left_stick_mag);
 
-  DrawCircle(p1.x, p1.y, rad, WHITE);
-  DrawCircle(p2.x, p2.y, rad, WHITE);
+  float right_stick_mag = sqrtf(right_stick_smooth.x*right_stick_smooth.x + right_stick_smooth.y*right_stick_smooth.y);
+  svg_set_fill_fraction(&ctrl_svg, "RightStick", CTRL_PRESS_COLOR, right_stick_mag);
 
-  DrawCircle(p1.x+c1.x, p1.y+c1.y, rad/3, RED);
-  DrawCircle(p2.x+c2.x, p2.y+c2.y, rad/3, RED);
-
-  // DrawRingLines(Vector2 center, float innerRadius, float outerRadius, float startAngle, float endAngle, int segments, Color color);    // Draw ring outline
-
-  // Input xbox_grid[][] = {
-  //   {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL},
-  //   {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL},
-  //   {NULL, GL, NULL, NULL, NULL, NULL, NULL, Y,	 NULL},
-  //   {NULL, NULL, NULL, NULL, NULL, NULL, X,	   NULL, B},
-  //   {NULL, NULL, NULL, NULL, NULL, NULL, NULL, A,	 NULL},
-  //   {NULL, NULL, NULL, NULL, NULL, GR, NULL, NULL, NULL},
-  // }
-
-  const int INPUTS_COUNT = sizeof inputs / sizeof inputs[0];
+  svg_rasterize(&ctrl_svg);
+  UpdateTexture(ctrl_tex, ctrl_svg.pixels);
+  DrawTexture(ctrl_tex, CTRL_SVG_X, CTRL_SVG_Y, WHITE);
 
   for (int i = 0; i < INPUTS_COUNT; i++) {
     Input input = inputs[i];
 
     if (input.type == BUTTON) {
       Color color = WHITE;
-      if(IsGamepadButtonDown(id, input.id)) color = input.color;
-      DrawText(TextFormat("%s", input.name), input.x*20, input.y*20, input.s, color);
+      if (IsGamepadButtonDown(id, input.id)) color = input.color;
+      DrawText(TextFormat("%s", input.name), CTRL_PANEL_X + input.x*20, input.y*20, input.s, color);
     }
 
     if (input.type == ANALOG) {
       Color color = WHITE;
-      if(GetGamepadAxisMovement(id, input.id) != input.idle_value) color = input.color;
-      /* DrawText(TextFormat("%s %f", input.name, (float)GetGamepadAxisMovement(id, input.id)), input.x, input.y, input.s, color); */
-      DrawText(TextFormat("%s", input.name), input.x*20, input.y*20, input.s, color);
-      DrawText(TextFormat("%f", (float)GetGamepadAxisMovement(id, input.id)), (input.x*20)+(12*20), input.y*20, input.s, color);
+      if (GetGamepadAxisMovement(id, input.id) != input.idle_value) color = input.color;
+      DrawText(TextFormat("%s", input.name), CTRL_PANEL_X + input.x*20, input.y*20, input.s, color);
+      DrawText(TextFormat("%f", (float)GetGamepadAxisMovement(id, input.id)), CTRL_PANEL_X + (input.x*20)+(12*20), input.y*20, input.s, color);
     }
   }
-
-  // TODO take a look at this detection stuff
-  /*             DrawText(TextFormat("DETECTED AXIS [%i]:", GetGamepadAxisCount(0)), 10, 50, 10, MAROON); */
-  /*  */
-  /*             for (int i = 0; i < GetGamepadAxisCount(0); i++) { */
-  /*                 DrawText(TextFormat("AXIS %i: %.02f", i, GetGamepadAxisMovement(0, i)), 20, 70 + 20*i, 10, DARKGRAY); */
-  /*             } */
-  /*  */
-  /*             if (GetGamepadButtonPressed() != -1) DrawText(TextFormat("DETECTED BUTTON: %i", GetGamepadButtonPressed()), 10, 430, 10, RED); */
-  /*             else DrawText("DETECTED BUTTON: NONE", 10, 430, 10, GRAY); */
 }
 
 int main(void) {
@@ -144,6 +187,17 @@ int main(void) {
   SetTargetFPS(60);
   SetExitKey(KEY_Q);
 
+  ctrl_svg = svg_controller_load("assets/controller.svg", CTRL_SVG_WIDTH, CTRL_SVG_HEIGHT);
+  style_controller_svg(&ctrl_svg);
+  Image ctrl_img = {
+    .data = ctrl_svg.pixels,
+    .width = ctrl_svg.width,
+    .height = ctrl_svg.height,
+    .mipmaps = 1,
+    .format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
+  };
+  ctrl_tex = LoadTextureFromImage(ctrl_img);
+
   Vector gamepad_ids;
   vec_init(&gamepad_ids, 0);
   int gamepad_id_curr = -1;
@@ -153,7 +207,7 @@ int main(void) {
     currTime = GetTime();
 
     BeginDrawing();
-    ClearBackground(BLACK);
+    ClearBackground(CTRL_BG_COLOR);
     w = GetScreenWidth();
     h = GetScreenHeight();
 
@@ -208,8 +262,6 @@ int main(void) {
       gamepad_id_curr = vec_get(&gamepad_ids, prev_i);
     }
 
-    /* DrawRectangle(317, 202, 19, 71, BLACK); */
-
     // calibration
     if (PLATFORM != "linux") {
       DrawText("Calibration is only available on linux :P", w-420, h-40, 20, WHITE);
@@ -222,6 +274,9 @@ int main(void) {
     DrawText("muhammedturki@protonmail.com", 10, h-20, 10, WHITE);
     EndDrawing();
   }
+
+  svg_controller_unload(&ctrl_svg);
+  UnloadTexture(ctrl_tex);
   CloseWindow();
 
   return 0;
